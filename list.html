@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Students Table with Flags & Dynamic Charts</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    input[type="text"] {
+      padding: 8px;
+      width: 300px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+    .selected-yes {
+      background-color: #e0ffe0;
+    }
+    .flag-icon {
+      width: 24px;
+      height: auto;
+      display: inline-block;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+    .flag-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .flag-wrapper svg {
+      max-width: 24px;
+      height: auto;
+    }
+    .charts-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 40px;
+    }
+    canvas {
+      width: 100% !important;
+      max-height: 400px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Student Listing</h1>
+
+  <input type="text" id="searchInput" placeholder="Search by name, school, or country...">
+
+  <table id="student-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Category</th>
+        <th>Name</th>
+        <th>School</th>
+        <th>Country</th>
+        <th>Selected</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="charts-container">
+    <div>
+      <h2>Students per School</h2>
+      <canvas id="schoolChart"></canvas>
+    </div>
+    <div>
+      <h2>Students by Country</h2>
+      <canvas id="countryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    let studentData = [];
+    let flagData = {};
+    let schoolChart, countryChart;
+
+    // Load JSON files
+    Promise.all([
+      fetch("students.json").then(res => res.json()),
+      fetch("flag.json").then(res => res.json())
+    ])
+    .then(([students, flags]) => {
+      studentData = students;
+      flagData = flags;
+      renderTableAndCharts(studentData);
+    });
+
+    // Render table + charts for given dataset
+    function renderTableAndCharts(data) {
+      renderTable(data);
+      renderCharts(data);
+    }
+
+    // === TABLE ===
+    function renderTable(data) {
+      const tableBody = document.querySelector("#student-table tbody");
+      tableBody.innerHTML = "";
+
+      const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedData.forEach(student => {
+        const row = document.createElement("tr");
+
+        const studentIdCell = document.createElement("td");
+        studentIdCell.textContent = student.id;
+
+        const categoryCell = document.createElement("td");
+        categoryCell.textContent = student.category;
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = student.name;
+
+        const schoolCell = document.createElement("td");
+        schoolCell.textContent = student.school;
+
+        const countryCell = document.createElement("td");
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("flag-wrapper");
+
+        if (flagData[student.country]) {
+          wrapper.innerHTML = `<span class="flag-icon" title="${student.country}">${flagData[student.country]}</span>`;
+        }
+        const textNode = document.createTextNode(student.country);
+        wrapper.appendChild(textNode);
+        countryCell.appendChild(wrapper);
+
+        const selectedCell = document.createElement("td");
+        selectedCell.textContent = student.selected;
+
+        if (student.selected === "Yes") {
+          row.classList.add("selected-yes");
+        }
+
+        row.appendChild(studentIdCell);
+        row.appendChild(categoryCell);
+        row.appendChild(nameCell);
+        row.appendChild(schoolCell);
+        row.appendChild(countryCell);
+        row.appendChild(selectedCell);
+
+        tableBody.appendChild(row);
+      });
+    }
+
+    // === CHARTS ===
+    function renderCharts(data) {
+      // destroy old charts if exist
+      if (schoolChart) schoolChart.destroy();
+      if (countryChart) countryChart.destroy();
+
+      // group by school
+      const schoolCounts = {};
+      const schoolStudents = {};
+      data.forEach(s => {
+        schoolCounts[s.school] = (schoolCounts[s.school] || 0) + 1;
+        if (!schoolStudents[s.school]) schoolStudents[s.school] = [];
+        schoolStudents[s.school].push(s.name);
+      });
+
+      const schoolChartCtx = document.getElementById("schoolChart").getContext("2d");
+      schoolChart = new Chart(schoolChartCtx, {
+        type: "bar",
+        data: {
+          labels: Object.keys(schoolCounts),
+          datasets: [{
+            label: "Number of Students",
+            data: Object.values(schoolCounts),
+            backgroundColor: "rgba(54, 162, 235, 0.6)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let school = context.label;
+                  let students = schoolStudents[school].join(", ");
+                  return `Students: ${students}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+
+      // group by country
+      const countryCounts = {};
+      const countryStudents = {};
+      data.forEach(s => {
+        countryCounts[s.country] = (countryCounts[s.country] || 0) + 1;
+        if (!countryStudents[s.country]) countryStudents[s.country] = [];
+        countryStudents[s.country].push(s.name);
+      });
+
+      const countryChartCtx = document.getElementById("countryChart").getContext("2d");
+      countryChart = new Chart(countryChartCtx, {
+        type: "pie",
+        data: {
+          labels: Object.keys(countryCounts),
+          datasets: [{
+            data: Object.values(countryCounts),
+            backgroundColor: [
+              "rgba(255, 99, 132, 0.6)",
+              "rgba(54, 162, 235, 0.6)",
+              "rgba(255, 206, 86, 0.6)",
+              "rgba(75, 192, 192, 0.6)"
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let country = context.label;
+                  let students = countryStudents[country].join(", ");
+                  return `${country}: ${students}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // === SEARCH FILTER ===
+    document.getElementById("searchInput").addEventListener("input", function() {
+      const query = this.value.toLowerCase();
+      const filtered = studentData.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        s.school.toLowerCase().includes(query) ||
+        s.country.toLowerCase().includes(query)
+      );
+      renderTableAndCharts(filtered);
+    });
+  </script>
+</body>
+</html>
