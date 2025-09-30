@@ -255,42 +255,41 @@
               <center>
               <div class="container">
 
-                    <center>
-  <h1>IARCO 2024 Student Statistics</h1>
-  <br>
+                    <h2>📊 Student Participation Dashboard</h2>
 
-  <!-- Overall Statistics -->
-  <div class="stats" id="overallStats">
-    <!-- Statistics will be displayed here -->
-  </div>
+    <!-- Charts first -->
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Selected vs Non-Selected (Junior)</h3>
+        <canvas id="juniorChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Selected vs Non-Selected (Senior)</h3>
+        <canvas id="seniorChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>🌍 Participation by Country</h3>
+        <canvas id="countryChart"></canvas>
+      </div>
+    </div>
 
-  <div class="chart-container">
-    <canvas id="studentChart"></canvas>
-  </div>
-
-  <hr>
-  <br>
-  <h1>Student Lists</h1>
-                        <p>Sorted by Name.</p>
-  <table id="student-table" class="table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Category</th>
-        <th>Name</th>
-        <th>Institute</th>
-        <th>Country</th>
-        <th>Video Pitch (Selected)</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Rows will be inserted here dynamically by JavaScript -->
-    </tbody>
-  </table>
-</center>
-                  
-                                     
-                </center>
+    <!-- Student Table -->
+    <h3>📋 Student List</h3>
+    <div class="table-wrapper">
+      <table id="student-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Name</th>
+            <th>School</th>
+            <th>Country</th>
+            <th>Selected</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
                 </div>
 
               </center>
