@@ -1,131 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Participation</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Participation Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9fafb;
-      margin: 0;
-      padding: 0;
-    }
+    body { font-family: Arial, sans-serif; background: #f9fafb; margin:0; padding:0; }
+    .container { max-width: 1100px; margin:auto; padding:12px; }
+    h2, h3 { text-align: center; margin-bottom: 6px; }
+    #stats { text-align:center; margin-bottom:12px; font-size:14px; color:#333; }
 
-    .container {
-      padding: 12px;
-      max-width: 1100px;
-      margin: auto;
-    }
-
-    h2, h3 {
-      text-align: center;
-      margin-bottom: 12px;
-    }
+    /* Search box */
+    #searchBox { display:block; margin:0 auto 6px auto; padding:6px 10px; width:90%; max-width:300px; border-radius:6px; border:1px solid #ccc; font-size:14px; }
+    #searchResult { text-align:center; font-size:13px; margin-bottom:12px; color:#333; min-height:18px; }
 
     /* Charts layout */
-    .charts {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .chart-card {
-      background: #fff;
-      padding: 8px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-
-    .chart-card canvas {
-      max-width: 180px !important;
-      max-height: 180px !important;
-      margin: auto;
-    }
+    .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:20px; }
+    .chart-card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); text-align:center; }
+    .chart-card canvas { max-width:180px !important; max-height:180px !important; margin:auto; }
 
     /* Table */
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
+    .table-wrapper { overflow-x:auto; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:20px; }
+    table { width:100%; border-collapse:collapse; background:#fff; min-width:600px; }
+    th, td { padding:6px; border:1px solid #ddd; text-align:center; font-size:14px; }
+    th { background:#f0f0f0; }
+    .selected-yes { background:#006400 !important; color:white; }
+    .highlight { background: #FFFF99 !important; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      min-width: 600px;
-    }
+    .flag-icon { width:20px; height:auto; display:inline-block; vertical-align:middle; }
 
-    th, td {
-      padding: 6px;
-      border: 1px solid #ddd;
-      text-align: center;
-      font-size: 14px;
-    }
-
-    th {
-      background: #f0f0f0;
-    }
-
-    .selected-yes {
-      background: #006400 !important; /* deep green */
-      color: white;
-    }
-
-    .flag-icon {
-      width: 20px;
-      height: auto;
-      display: inline-block;
-      vertical-align: middle;
-    }
-
-    /* Mobile adjustments */
-    @media (max-width: 600px) {
-      h2, h3 {
-        font-size: 16px;
-      }
-      th, td {
-        font-size: 12px;
-        padding: 4px;
-      }
-      .chart-card canvas {
-        max-width: 140px !important;
-        max-height: 140px !important;
-      }
+    @media (max-width:600px){
+      h2,h3{font-size:16px;}
+      th,td{font-size:12px;padding:4px;}
+      .chart-card canvas{max-width:140px !important; max-height:140px !important;}
     }
 
     /* Legend with flags */
-    .custom-legend {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      background: #fff;
-      padding: 4px 8px;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .legend-item .flag {
-      width: 18px;
-      height: auto;
-      display: inline-block;
-    }
+    .custom-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:10px;}
+    .legend-item{display:inline-flex;align-items:center;gap:6px;font-size:13px;background:#fff;padding:4px 8px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+    .legend-item .flag{width:18px;height:auto; display:inline-block;}
   </style>
 </head>
 <body>
   <div class="container">
     <h2>📊 Student Participation Dashboard</h2>
+    <div id="stats">Loading statistics...</div>
+
+    <!-- Search box and result -->
+    <input type="text" id="searchBox" placeholder="Search student by name..." />
+    <div id="searchResult"></div>
 
     <!-- Charts first -->
     <div class="charts">
@@ -168,7 +92,7 @@
     let flagData = {};
     let charts = {};
 
-    // Load JSON files then render
+    // Load JSON files
     Promise.all([
       fetch("students.json").then(res => res.json()),
       fetch("flag.json").then(res => res.json())
@@ -176,143 +100,119 @@
       studentData = students;
       flagData = flags;
       renderTable();
+      renderStats();
       renderCharts();
     });
+
+    // Render statistics dynamically
+    function renderStats() {
+      const total = studentData.length;
+      const juniorYes = studentData.filter(s=>s.category==='Junior'&&s.selected==='Yes').length;
+      const juniorNo = studentData.filter(s=>s.category==='Junior'&&s.selected==='No').length;
+      const seniorYes = studentData.filter(s=>s.category==='Senior'&&s.selected==='Yes').length;
+      const seniorNo = studentData.filter(s=>s.category==='Senior'&&s.selected==='No').length;
+
+      document.getElementById("stats").innerHTML = 
+        `Total: ${total} | Junior Selected: ${juniorYes}, Not Selected: ${juniorNo} | Senior Selected: ${seniorYes}, Not Selected: ${seniorNo}`;
+    }
 
     // Render student table
     function renderTable() {
       const tableBody = document.querySelector("#student-table tbody");
       tableBody.innerHTML = "";
+      const sorted = studentData.sort((a,b)=>a.name.localeCompare(b.name));
 
-      const sortedStudents = studentData.sort((a, b) => a.name.localeCompare(b.name));
-
-      sortedStudents.forEach(student => {
+      sorted.forEach(student => {
         const row = document.createElement("tr");
-
-        const idCell = document.createElement("td");
-        idCell.textContent = student.id;
-
-        const catCell = document.createElement("td");
-        catCell.textContent = student.category;
-
-        const nameCell = document.createElement("td");
-        nameCell.textContent = student.name;
-
-        const schoolCell = document.createElement("td");
-        schoolCell.textContent = student.school;
-
-        const countryCell = document.createElement("td");
-        if (flagData[student.country]) {
-          const span = document.createElement("span");
-          span.classList.add("flag-icon");
-          span.innerHTML = flagData[student.country];
-          span.title = student.country;
-          countryCell.appendChild(span);
-        }
-
-        const selectedCell = document.createElement("td");
-        selectedCell.textContent = student.selected;
-
-        if (student.selected === "Yes") {
-          row.classList.add("selected-yes");
-        }
-
-        row.appendChild(idCell);
-        row.appendChild(catCell);
-        row.appendChild(nameCell);
-        row.appendChild(schoolCell);
-        row.appendChild(countryCell);
-        row.appendChild(selectedCell);
-
+        row.innerHTML = `
+          <td>${student.id}</td>
+          <td>${student.category}</td>
+          <td>${student.name}</td>
+          <td>${student.school}</td>
+          <td>${flagData[student.country]? `<span class="flag-icon" title="${student.country}">${flagData[student.country]}</span>`: student.country}</td>
+          <td>${student.selected}</td>
+        `;
+        if(student.selected==="Yes") row.classList.add("selected-yes");
         tableBody.appendChild(row);
       });
     }
 
     // Render charts
     function renderCharts() {
-      // Destroy old charts if they exist
-      for (const key in charts) {
-        charts[key].destroy();
-      }
+      for(const key in charts){ charts[key].destroy(); }
 
       // Junior chart
-      const juniors = studentData.filter(s => s.category === "Junior");
-      const juniorYes = juniors.filter(s => s.selected === "Yes").length;
-      const juniorNo = juniors.filter(s => s.selected === "No").length;
-
-      charts.juniorChart = new Chart(document.getElementById("juniorChart"), {
-        type: "doughnut",
-        data: {
-          labels: ["Selected", "Not Selected"],
-          datasets: [{
-            data: [juniorYes, juniorNo],
-            backgroundColor: ["#006400", "#FF5252"]
-          }]
-        }
+      const juniors = studentData.filter(s=>s.category==='Junior');
+      const juniorYes = juniors.filter(s=>s.selected==='Yes').length;
+      const juniorNo = juniors.filter(s=>s.selected==='No').length;
+      charts.juniorChart = new Chart(document.getElementById("juniorChart"),{
+        type:"doughnut",
+        data:{ labels:["Selected","Not Selected"], datasets:[{ data:[juniorYes,juniorNo], backgroundColor:["#006400","#FF5252"] }] }
       });
 
       // Senior chart
-      const seniors = studentData.filter(s => s.category === "Senior");
-      const seniorYes = seniors.filter(s => s.selected === "Yes").length;
-      const seniorNo = seniors.filter(s => s.selected === "No").length;
-
-      charts.seniorChart = new Chart(document.getElementById("seniorChart"), {
-        type: "doughnut",
-        data: {
-          labels: ["Selected", "Not Selected"],
-          datasets: [{
-            data: [seniorYes, seniorNo],
-            backgroundColor: ["#006400", "#FF5252"]
-          }]
-        }
+      const seniors = studentData.filter(s=>s.category==='Senior');
+      const seniorYes = seniors.filter(s=>s.selected==='Yes').length;
+      const seniorNo = seniors.filter(s=>s.selected==='No').length;
+      charts.seniorChart = new Chart(document.getElementById("seniorChart"),{
+        type:"doughnut",
+        data:{ labels:["Selected","Not Selected"], datasets:[{ data:[seniorYes, seniorNo], backgroundColor:["#006400","#FF5252"] }] }
       });
 
-      // Country pie
+      // Country pie chart
       const countryCounts = {};
-      studentData.forEach(s => {
-        countryCounts[s.country] = (countryCounts[s.country] || 0) + 1;
-      });
-
+      studentData.forEach(s=>countryCounts[s.country]=(countryCounts[s.country]||0)+1);
       const countryLabels = Object.keys(countryCounts);
       const countryValues = Object.values(countryCounts);
 
-      charts.countryChart = new Chart(document.getElementById("countryChart"), {
-        type: "pie",
-        data: {
-          labels: countryLabels,
-          datasets: [{
-            data: countryValues,
-            backgroundColor: ["#2196F3", "#FF9800", "#9C27B0", "#009688", "#FFEB3B"]
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { display: false }, // hide default
-            tooltip: {
-              callbacks: {
-                label: function(ctx) {
-                  const country = ctx.label;
-                  const count = ctx.raw;
-                  return `${country}: ${count}`;
-                }
-              }
-            }
-          }
-        }
+      charts.countryChart = new Chart(document.getElementById("countryChart"),{
+        type:"pie",
+        data:{ labels:countryLabels, datasets:[{ data:countryValues, backgroundColor:["#2196F3","#FF9800","#9C27B0","#009688","#FFEB3B"] }] },
+        options:{ plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}`}} } }
       });
 
-      // Custom HTML legend with flags
+      // Custom legend with flags
       const legendDiv = document.getElementById("countryLegend");
       legendDiv.innerHTML = "";
-      countryLabels.forEach((label, i) => {
+      countryLabels.forEach((label,i)=>{
         const value = countryValues[i];
-        const svg = flagData[label] ? flagData[label] : "";
+        const svg = flagData[label]||"";
         const item = document.createElement("div");
         item.classList.add("legend-item");
         item.innerHTML = `<span class="flag">${svg}</span> ${label} (${value})`;
         legendDiv.appendChild(item);
       });
     }
+
+    // Search functionality
+    const searchBox = document.getElementById("searchBox");
+    const searchResult = document.getElementById("searchResult");
+
+    searchBox.addEventListener("input",()=>{
+      const query = searchBox.value.toLowerCase();
+      const rows = document.querySelectorAll("#student-table tbody tr");
+      rows.forEach(row=>row.classList.remove("highlight"));
+
+      if(query===""){
+        searchResult.textContent = "";
+        return;
+      }
+
+      let foundCount = 0;
+      rows.forEach(row=>{
+        const name = row.cells[2].textContent.toLowerCase();
+        if(name.includes(query)){
+          row.classList.add("highlight");
+          const selected = row.cells[5].textContent;
+          searchResult.textContent = `${row.cells[2].textContent} is ${selected}`;
+          foundCount++;
+        }
+      });
+
+      if(foundCount===0){
+        searchResult.textContent = "No student found.";
+      }
+    });
   </script>
 </body>
 </html>
