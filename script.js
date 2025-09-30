@@ -101,54 +101,94 @@ function renderCharts() {
     }
   });
 
-  // Country Participation Pie (with flags in legend tooltips)
-  const countryCounts = {};
-  studentData.forEach(s => {
-    countryCounts[s.country] = (countryCounts[s.country] || 0) + 1;
-  });
+ // Country Participation Pie (with flags in legend tooltips)
+const countryCounts = {};
+studentData.forEach(s => {
+  countryCounts[s.country] = (countryCounts[s.country] || 0) + 1;
+});
 
-  const countryLabels = Object.keys(countryCounts);
-  const countryValues = Object.values(countryCounts);
+const countryLabels = Object.keys(countryCounts);
+const countryValues = Object.values(countryCounts);
 
-  charts.countryChart = new Chart(document.getElementById("countryChart"), {
-    type: "pie",
-    data: {
-      labels: countryLabels,
-      datasets: [{
-        data: countryValues,
-        backgroundColor: ["#2196F3", "#FF9800", "#9C27B0", "#009688"]
-      }]
-    },
-    options: {
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              const country = ctx.label;
-              const count = ctx.raw;
-              let svg = flagData[country] ? flagData[country] : "";
-              return `${country}: ${count}`;
-            }
+charts.countryChart = new Chart(document.getElementById("countryChart"), {
+  type: "pie",
+  data: {
+    labels: countryLabels,
+    datasets: [{
+      data: countryValues,
+      backgroundColor: ["#2196F3", "#FF9800", "#9C27B0", "#009688", "#FFEB3B"]
+    }]
+  },
+  options: {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            const country = ctx.label;
+            const count = ctx.raw;
+            return `${country}: ${count}`;
           }
-        },
-        legend: {
-          labels: {
-            generateLabels: (chart) => {
-              const data = chart.data;
-              return data.labels.map((label, i) => {
-                const svg = flagData[label] ? flagData[label] : "";
-                return {
-                  text: label,
-                  fillStyle: data.datasets[0].backgroundColor[i],
-                  strokeStyle: data.datasets[0].backgroundColor[i],
-                  hidden: false,
-                  index: i
-                };
-              });
-            }
+        }
+      },
+      legend: {
+        labels: {
+          generateLabels: (chart) => {
+            const data = chart.data;
+            return data.labels.map((label, i) => {
+              const value = data.datasets[0].data[i];
+              const svg = flagData[label] ? flagData[label] : "";
+              return {
+                text: `${label} (${value})`,
+                fillStyle: data.datasets[0].backgroundColor[i],
+                strokeStyle: data.datasets[0].backgroundColor[i],
+                index: i,
+                hidden: false,
+                // Instead of colored box, we’ll attach the SVG
+                html: `<span style="display:inline-flex;align-items:center;gap:6px;">
+                         <span style="width:20px;height:auto;display:inline-block;">${svg}</span>
+                         ${label} (${value})
+                       </span>`
+              };
+            });
           }
         }
       }
     }
-  });
-}
+  },
+  plugins: [{
+    // Custom plugin to render SVG in legend
+    id: "custom-legend-html",
+    afterUpdate(chart) {
+      const legendItems = chart.options.plugins.legend.labels.generateLabels(chart);
+      const legend = chart.legend;
+      if (!legend) return;
+
+      legend.legendItems = legendItems.map((item, i) => {
+        return {
+          ...item,
+          text: item.html, // store html
+        };
+      });
+    },
+    afterDraw(chart) {
+      const legend = chart.legend;
+      if (!legend) return;
+
+      // Replace default text with inline HTML
+      const legendContainer = legend.legendHitBoxes.map((box, i) => {
+        const item = legend.legendItems[i];
+        const ctx = chart.ctx;
+
+        ctx.save();
+        ctx.clearRect(box.left, box.top, box.width, box.height);
+
+        // Render custom HTML directly into legend
+        const div = document.createElement("div");
+        div.innerHTML = item.text;
+        div.style.position = "absolute";
+        div.style.left = box.left + chart.canvas.getBoundingClientRect().left + "px";
+        div.style.top = box.top + chart.canvas.getBoundingClientRect().top + "px";
+      });
+    }
+  }]
+});
