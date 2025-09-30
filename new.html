@@ -11,35 +11,41 @@
     h2, h3 { text-align: center; margin-bottom: 6px; }
     #stats { text-align:center; margin-bottom:12px; font-size:14px; color:#333; }
 
-    /* Search box */
+    /* Search */
     #searchBox { display:block; margin:0 auto 6px auto; padding:6px 10px; width:90%; max-width:300px; border-radius:6px; border:1px solid #ccc; font-size:14px; }
     #searchResult { text-align:center; font-size:13px; margin-bottom:12px; color:#333; min-height:18px; }
 
-    /* Charts layout */
+    /* Charts */
     .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:20px; }
     .chart-card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); text-align:center; }
     .chart-card canvas { max-width:180px !important; max-height:180px !important; margin:auto; }
 
+    /* Country list */
+    .country-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:12px 0; }
+    .country-item { display:flex; align-items:center; gap:6px; background:#fff; padding:6px 8px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); font-size:13px; }
+    .country-item .flag { width:18px; height:auto; display:inline-block; }
+
     /* Table */
-    .table-wrapper { overflow-x:auto; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:20px; }
+    .table-wrapper { overflow-x:auto; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-bottom:20px; max-height:500px; overflow-y:auto; }
     table { width:100%; border-collapse:collapse; background:#fff; min-width:600px; }
     th, td { padding:6px; border:1px solid #ddd; text-align:center; font-size:14px; }
-    th { background:#f0f0f0; }
+    th { 
+      background:#f0f0f0; 
+      position: sticky; 
+      top: 0; 
+      z-index: 5; 
+      white-space: nowrap; 
+    }
     .selected-yes { background:#006400 !important; color:white; }
     .highlight { background: #FFFF99 !important; }
-
     .flag-icon { width:20px; height:auto; display:inline-block; vertical-align:middle; }
 
     @media (max-width:600px){
       h2,h3{font-size:16px;}
       th,td{font-size:12px;padding:4px;}
       .chart-card canvas{max-width:140px !important; max-height:140px !important;}
+      .country-item{font-size:12px;}
     }
-
-    /* Legend with flags */
-    .custom-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:10px;}
-    .legend-item{display:inline-flex;align-items:center;gap:6px;font-size:13px;background:#fff;padding:4px 8px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
-    .legend-item .flag{width:18px;height:auto; display:inline-block;}
   </style>
 </head>
 <body>
@@ -47,11 +53,11 @@
     <h2>📊 Student Participation Dashboard</h2>
     <div id="stats">Loading statistics...</div>
 
-    <!-- Search box and result -->
+    <!-- Search -->
     <input type="text" id="searchBox" placeholder="Search student by name..." />
     <div id="searchResult"></div>
 
-    <!-- Charts first -->
+    <!-- Charts -->
     <div class="charts">
       <div class="chart-card">
         <h3>Junior</h3>
@@ -64,9 +70,12 @@
       <div class="chart-card">
         <h3>🌍 By Country</h3>
         <canvas id="countryChart"></canvas>
-        <div id="countryLegend" class="custom-legend"></div>
       </div>
     </div>
+
+    <!-- Country list -->
+    <h3>🌍 Participating Countries</h3>
+    <div id="countryList" class="country-list"></div>
 
     <!-- Student Table -->
     <h3>📋 Student List</h3>
@@ -92,7 +101,7 @@
     let flagData = {};
     let charts = {};
 
-    // Load JSON files
+    // Load data
     Promise.all([
       fetch("students.json").then(res => res.json()),
       fetch("flag.json").then(res => res.json())
@@ -102,18 +111,20 @@
       renderTable();
       renderStats();
       renderCharts();
+      renderCountryList();
     });
 
-    // Render statistics dynamically
+    // Render statistics
     function renderStats() {
       const total = studentData.length;
       const juniorYes = studentData.filter(s=>s.category==='Junior'&&s.selected==='Yes').length;
       const juniorNo = studentData.filter(s=>s.category==='Junior'&&s.selected==='No').length;
       const seniorYes = studentData.filter(s=>s.category==='Senior'&&s.selected==='Yes').length;
       const seniorNo = studentData.filter(s=>s.category==='Senior'&&s.selected==='No').length;
+      const schoolCount = new Set(studentData.map(s=>s.school)).size;
 
       document.getElementById("stats").innerHTML = 
-        `Total: ${total} | Junior Selected: ${juniorYes}, Not Selected: ${juniorNo} | Senior Selected: ${seniorYes}, Not Selected: ${seniorNo}`;
+        `Total: ${total} | Junior Selected: ${juniorYes}, Not Selected: ${juniorNo} | Senior Selected: ${seniorYes}, Not Selected: ${seniorNo} | Participating Schools: ${schoolCount}`;
     }
 
     // Render student table
@@ -141,7 +152,6 @@
     function renderCharts() {
       for(const key in charts){ charts[key].destroy(); }
 
-      // Junior chart
       const juniors = studentData.filter(s=>s.category==='Junior');
       const juniorYes = juniors.filter(s=>s.selected==='Yes').length;
       const juniorNo = juniors.filter(s=>s.selected==='No').length;
@@ -150,7 +160,6 @@
         data:{ labels:["Selected","Not Selected"], datasets:[{ data:[juniorYes,juniorNo], backgroundColor:["#006400","#FF5252"] }] }
       });
 
-      // Senior chart
       const seniors = studentData.filter(s=>s.category==='Senior');
       const seniorYes = seniors.filter(s=>s.selected==='Yes').length;
       const seniorNo = seniors.filter(s=>s.selected==='No').length;
@@ -159,7 +168,6 @@
         data:{ labels:["Selected","Not Selected"], datasets:[{ data:[seniorYes, seniorNo], backgroundColor:["#006400","#FF5252"] }] }
       });
 
-      // Country pie chart
       const countryCounts = {};
       studentData.forEach(s=>countryCounts[s.country]=(countryCounts[s.country]||0)+1);
       const countryLabels = Object.keys(countryCounts);
@@ -170,21 +178,27 @@
         data:{ labels:countryLabels, datasets:[{ data:countryValues, backgroundColor:["#2196F3","#FF9800","#9C27B0","#009688","#FFEB3B"] }] },
         options:{ plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}`}} } }
       });
+    }
 
-      // Custom legend with flags
-      const legendDiv = document.getElementById("countryLegend");
-      legendDiv.innerHTML = "";
-      countryLabels.forEach((label,i)=>{
-        const value = countryValues[i];
-        const svg = flagData[label]||"";
+    // Render country list
+    function renderCountryList() {
+      const countryCounts = {};
+      studentData.forEach(s=>countryCounts[s.country]=(countryCounts[s.country]||0)+1);
+      const countries = Object.keys(countryCounts).sort();
+
+      const container = document.getElementById("countryList");
+      container.innerHTML = "";
+      countries.forEach(country=>{
         const item = document.createElement("div");
-        item.classList.add("legend-item");
-        item.innerHTML = `<span class="flag">${svg}</span> ${label} (${value})`;
-        legendDiv.appendChild(item);
+        item.classList.add("country-item");
+        item.innerHTML = `
+          <span class="flag">${flagData[country]||""}</span> ${country} (${countryCounts[country]})
+        `;
+        container.appendChild(item);
       });
     }
 
-    // Search functionality
+    // Search
     const searchBox = document.getElementById("searchBox");
     const searchResult = document.getElementById("searchResult");
 
@@ -193,25 +207,20 @@
       const rows = document.querySelectorAll("#student-table tbody tr");
       rows.forEach(row=>row.classList.remove("highlight"));
 
-      if(query===""){
-        searchResult.textContent = "";
-        return;
-      }
+      if(query===""){ searchResult.textContent=""; return; }
 
       let foundCount = 0;
+      let results = [];
       rows.forEach(row=>{
         const name = row.cells[2].textContent.toLowerCase();
         if(name.includes(query)){
           row.classList.add("highlight");
           const selected = row.cells[5].textContent;
-          searchResult.textContent = `${row.cells[2].textContent} is ${selected}`;
+          results.push(`${row.cells[2].textContent} is ${selected}`);
           foundCount++;
         }
       });
-
-      if(foundCount===0){
-        searchResult.textContent = "No student found.";
-      }
+      searchResult.textContent = foundCount>0 ? results.join(" | ") : "No student found.";
     });
   </script>
 </body>
