@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Participation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      padding: 12px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* Charts layout */
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .chart-card {
+      background: #fff;
+      padding: 8px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .chart-card canvas {
+      max-width: 180px !important;
+      max-height: 180px !important;
+      margin: auto;
+    }
+
+    /* Table */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      min-width: 600px;
+    }
+
+    th, td {
+      padding: 6px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .selected-yes {
+      background: #006400 !important; /* deep green */
+      color: white;
+    }
+
+    .flag-icon {
+      width: 20px;
+      height: auto;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 600px) {
+      h2, h3 {
+        font-size: 16px;
+      }
+      th, td {
+        font-size: 12px;
+        padding: 4px;
+      }
+      .chart-card canvas {
+        max-width: 140px !important;
+        max-height: 140px !important;
+      }
+    }
+
+    /* Legend with flags */
+    .custom-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      background: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .legend-item .flag {
+      width: 18px;
+      height: auto;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 Student Participation Dashboard</h2>
+
+    <!-- Charts first -->
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Junior</h3>
+        <canvas id="juniorChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Senior</h3>
+        <canvas id="seniorChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>🌍 By Country</h3>
+        <canvas id="countryChart"></canvas>
+        <div id="countryLegend" class="custom-legend"></div>
+      </div>
+    </div>
+
+    <!-- Student Table -->
+    <h3>📋 Student List</h3>
+    <div class="table-wrapper">
+      <table id="student-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Name</th>
+            <th>School</th>
+            <th>Country</th>
+            <th>Selected</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let studentData = [];
+    let flagData = {};
+    let charts = {};
+
+    // Load JSON files then render
+    Promise.all([
+      fetch("students.json").then(res => res.json()),
+      fetch("flag.json").then(res => res.json())
+    ]).then(([students, flags]) => {
+      studentData = students;
+      flagData = flags;
+      renderTable();
+      renderCharts();
+    });
+
+    // Render student table
+    function renderTable() {
+      const tableBody = document.querySelector("#student-table tbody");
+      tableBody.innerHTML = "";
+
+      const sortedStudents = studentData.sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedStudents.forEach(student => {
+        const row = document.createElement("tr");
+
+        const idCell = document.createElement("td");
+        idCell.textContent = student.id;
+
+        const catCell = document.createElement("td");
+        catCell.textContent = student.category;
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = student.name;
+
+        const schoolCell = document.createElement("td");
+        schoolCell.textContent = student.school;
+
+        const countryCell = document.createElement("td");
+        if (flagData[student.country]) {
+          const span = document.createElement("span");
+          span.classList.add("flag-icon");
+          span.innerHTML = flagData[student.country];
+          span.title = student.country;
+          countryCell.appendChild(span);
+        }
+
+        const selectedCell = document.createElement("td");
+        selectedCell.textContent = student.selected;
+
+        if (student.selected === "Yes") {
+          row.classList.add("selected-yes");
+        }
+
+        row.appendChild(idCell);
+        row.appendChild(catCell);
+        row.appendChild(nameCell);
+        row.appendChild(schoolCell);
+        row.appendChild(countryCell);
+        row.appendChild(selectedCell);
+
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Render charts
+    function renderCharts() {
+      // Destroy old charts if they exist
+      for (const key in charts) {
+        charts[key].destroy();
+      }
+
+      // Junior chart
+      const juniors = studentData.filter(s => s.category === "Junior");
+      const juniorYes = juniors.filter(s => s.selected === "Yes").length;
+      const juniorNo = juniors.filter(s => s.selected === "No").length;
+
+      charts.juniorChart = new Chart(document.getElementById("juniorChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Selected", "Not Selected"],
+          datasets: [{
+            data: [juniorYes, juniorNo],
+            backgroundColor: ["#006400", "#FF5252"]
+          }]
+        }
+      });
+
+      // Senior chart
+      const seniors = studentData.filter(s => s.category === "Senior");
+      const seniorYes = seniors.filter(s => s.selected === "Yes").length;
+      const seniorNo = seniors.filter(s => s.selected === "No").length;
+
+      charts.seniorChart = new Chart(document.getElementById("seniorChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Selected", "Not Selected"],
+          datasets: [{
+            data: [seniorYes, seniorNo],
+            backgroundColor: ["#006400", "#FF5252"]
+          }]
+        }
+      });
+
+      // Country pie
+      const countryCounts = {};
+      studentData.forEach(s => {
+        countryCounts[s.country] = (countryCounts[s.country] || 0) + 1;
+      });
+
+      const countryLabels = Object.keys(countryCounts);
+      const countryValues = Object.values(countryCounts);
+
+      charts.countryChart = new Chart(document.getElementById("countryChart"), {
+        type: "pie",
+        data: {
+          labels: countryLabels,
+          datasets: [{
+            data: countryValues,
+            backgroundColor: ["#2196F3", "#FF9800", "#9C27B0", "#009688", "#FFEB3B"]
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false }, // hide default
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const country = ctx.label;
+                  const count = ctx.raw;
+                  return `${country}: ${count}`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Custom HTML legend with flags
+      const legendDiv = document.getElementById("countryLegend");
+      legendDiv.innerHTML = "";
+      countryLabels.forEach((label, i) => {
+        const value = countryValues[i];
+        const svg = flagData[label] ? flagData[label] : "";
+        const item = document.createElement("div");
+        item.classList.add("legend-item");
+        item.innerHTML = `<span class="flag">${svg}</span> ${label} (${value})`;
+        legendDiv.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
