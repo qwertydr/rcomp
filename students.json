@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "category": "High School",
+    "name": "Alice Johnson",
+    "school": "Capstone International School Dhaka",
+    "country": "United States",
+    "selected": "Yes"
+  },
+  {
+    "id": 2,
+    "category": "College",
+    "name": "Rahim Uddin",
+    "school": "Capstone International School Dhaka",
+    "country": "Bangladesh",
+    "selected": "No"
+  },
+  {
+    "id": 3,
+    "category": "High School",
+    "name": "Sophia Lee",
+    "school": "Capstone International School Dhaka",
+    "country": "United States",
+    "selected": "Yes"
+  }
+]
